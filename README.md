@@ -54,7 +54,8 @@ app, migrations, tests, venv都是次级目录, app实现主要的功能, MVC设
     def make_shell_context():
         return dict(db=db, User=User, Role=Role)
 
-主要的运行还是在create_app函数中, 该函数在app/\_\_init__.py文件中, 其导入了所有的要使用到的插件, 生成,配置app并将插件用于了初始化app, 最后将事先写好的蓝本注册到app中, 返回app, 此时的app就是已经完成了所有功能的app了. 蓝本是在app/main/\_\_init__.py中定义的, 使用蓝本定义了Controler的所有功能, 即视图应该做什么.
+主要的运行还是在create_app函数中, 该函数在app/\_\_init__.py文件中, 其导入了所有的要使用到的插件, 生成,配置app并将插件用于了初始化app, 在这之后的将会注册到应用中的子应用所使用的插件对象都可以在此导入, 最后将事先写好的蓝本注册到app中, 返回app, 此时的app就是已经完成了所有功能的app了. 蓝本是在app/main/\_\_init__.py中定义的, 使用蓝本定义了Controler的所有功能, 即视图应该做什么.  
+`app.register_blueprint`的*url_prefix*参数, 可以指定该蓝本下的所有附属视图路由的前面都多一个链接前缀
 
     # app/__init__.py, 即导入app包就可以导入
     from flask import Flask
@@ -105,8 +106,14 @@ app, migrations, tests, venv都是次级目录, app实现主要的功能, MVC设
 2. app/包(\_\_init__.py), create_app函数, 会生成完整的app应用  
     2.1 会去调用蓝本, 蓝本是在app/main/包(\_\_init__.py)中创建
 
+> practice_flask_blog.py --> app/\_\_init__.py --> app/main/\_\_init__.py
+
 #### 使用蓝本
 
 + 使用工厂函数的操作让定义路由变复杂了. 在单脚本应用中, 应用实例存在于全局作用域中 路由可以直接使用app.route装饰器定义. 此时应用在运行时创建, 只有调用create_app之后才能使用app.route装饰器, 这时定义路由就太晚了.
 + 自定义的错误处理程序页面临同样的问题, 因为错误页面处理程序使用app.errorhandler装饰器定义.
 + 蓝本和应用类似, 也可以定义路由和错误处理程序. 不同的是在蓝本中定义的路由和错误处理程序处于休眠状态, 直到蓝本注册到应用上之后, 他们才真正成为应用的一部分. 使用位于全局作用域中的蓝本时, 定义路由和错误处理程序的方法几乎与单脚本应用一样.
+
+## 详细笔记
+
+[用户身份验证](./01用户身份验证.md)  
