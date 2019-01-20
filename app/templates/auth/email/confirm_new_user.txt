@@ -1,0 +1,8 @@
+Hi, {{ new_user.username }}
+
+Welcome to my blog.
+
+请在一小时单击下面链接确认你的新账户.
+
+{{ url_for('auth.confirm', token=token, _external=True) }}
+
