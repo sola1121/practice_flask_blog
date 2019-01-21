@@ -1,0 +1,7 @@
+Hi, {{ current_user.username }}
+
+正在尝试重新绑定邮箱, 请确认是否为本人操作.
+
+点击下面链接将会重新绑定邮箱
+
+{{ url_for('auth.change_email_02', token=token, _external=True) }}

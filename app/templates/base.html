@@ -26,7 +26,19 @@
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 {% if current_user.is_authenticated %}
-                <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {{ current_user.username }} <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="navigation">
+                        {% if current_user.confirmed %}
+                        <li><a href="{{ url_for('auth.change_pass') }}">Change Password</a></li>
+                        <li><a href="{{ url_for('auth.change_email_01') }}">Changed Email</a></li>
+                        <li role="separator" class="divider"></li>
+                        {% endif %}
+                        <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                    </ul>
+                </div>
                 {% else %}
                 <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
                 {% endif %}
