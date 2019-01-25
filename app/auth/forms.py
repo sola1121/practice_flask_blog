@@ -42,7 +42,7 @@ class ChangePasswordForm(FlaskForm):
 
 
 class EmailForm(FlaskForm):
-    email = StringField("注册邮箱", validators=[DataRequired(), Length(4, 64), Email()])
+    email = StringField("新邮箱", validators=[DataRequired(), Length(4, 64), Email()])
     submit = SubmitField("确认邮箱")
 
 

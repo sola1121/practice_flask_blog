@@ -5,6 +5,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 
 from . import db, login_manager
 
+import datetime
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -23,11 +24,11 @@ class Role(db.Model):
         return '<Role %r>' % self.name
 
     def add_permissions(self, perm):
-        if not self.has_permisson(perm):
+        if not self.has_permissions(perm):
             self.permissions += perm
 
     def remove_permissions(self, perm):
-        if self.has_permission(perm):
+        if self.has_permissions(perm):
             self.permissions -= perm
         
     def reset_permissions(self):
@@ -75,6 +76,12 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(128))
     email = db.Column(db.String(64), unique=True, index=True)
     confirmed = db.Column(db.Boolean, default=False)
+    # 用户的一些额外的信息
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -122,6 +129,12 @@ class User(db.Model, UserMixin):
 
     def is_administrator(self):
         return self.can(Permission.ADMIN)
+    
+    def ping(self):
+        """每次登录更新时间"""
+        self.last_seen = datetime.datetime.utcnow()
+        db.session.add(self)
+        db.session.commit()
 
 
 class AnonymousUser(AnonymousUserMixin):

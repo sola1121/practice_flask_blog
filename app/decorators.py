@@ -8,7 +8,7 @@ import functools
 def permission_required(permission):
     """用于检查用户权限的自定义装饰器, 使用curren_user判断"""
     def decorator(f):
-        @functools.wraps
+        @functools.wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.can(permission):
                 abort(403)

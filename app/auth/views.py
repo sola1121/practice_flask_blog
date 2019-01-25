@@ -67,12 +67,15 @@ def confirm_account(token):
 
 @auth.before_app_request
 def before_request():
-    """在发起请求前检查
-    用户已登录, 用户未确认邮箱, 请求的URL不在身份蓝本中, 不是对静态文件的请求.
+    """对用户的每次请求都进行提前的检查
+    用户已登录, 将更新登录时间), 执行之后检查
+    用户未确认邮箱, 并且请求的URL不在auth蓝本中, 也不是对静态文件的请求, 将会重定向到要求确认邮箱的界面
     """
-    if current_user.is_authenticated and not current_user.confirmed and \
-        request.blueprint != "auth" and request.endpoint != "static":
-        return redirect(url_for("auth.unconfirmed"))
+    if current_user.is_authenticated:
+        current_user.ping()
+        if not current_user.confirmed and \
+           request.blueprint != "auth" and request.endpoint != "static":
+            return redirect(url_for("auth.unconfirmed"))
 
 
 @auth.route("/unconfirmed")

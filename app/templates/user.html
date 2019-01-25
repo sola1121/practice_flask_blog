@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Blog - User Account{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>{{ user.username }}</h1>
+    {# 用户是否定义了名字或地址, 有则显示 #}
+    {% if user.name or user.location %}
+    <p>
+        {% if user.name %} {{ user.name }} {% endif %}
+        {% if user.location %}
+            Form <a href="http://maps.google.com/?q={{ user.location }}">{{ user.location }}</a>
+        {% endif %}
+    </p>
+    {% endif %}
+    {# 当前用户是否是管理员, 是则显示用户的邮件地址 #}
+    {% if current_user.is_administrator() %}
+    <p><a href="mailto:{{ user.email }}">{{ user.email }}</a></p>
+    {% endif %}
+    {# 用户是否有简介, 有则显示 #}
+    {% if user.about_me %}<p>{{ user.about_me }}</p>{% endif %}
+    <p>
+        {# 显示用户的注册时间和最近登录时间, 使用flask_moment渲染 #}
+        Member since {{ moment(user.member_since).format("L") }}.
+        Last seen {{ moment(user.last_seen).fromNow() }}
+    </p>
+    {# 确保只有当用户查看自己的资料时才显示这个链接 #}
+    {% if user == current_user %}
+    <a class="btn btn-default" href="{{ url_for('.edit_profile') }}">编辑资料</a>
+    {% endif %}
+    {# 如果当前用户是管理员, 会显示管理员使用的编辑按钮 #}
+    {% if current_user.is_administrator() %}
+        <a class="btn btn-danger" href="{{ url_for('.edit_profile_admin', id=user.id) }}">Edit Profile [Admin]</a>
+    {% endif %}
+</div>
+{% endblock %}
