@@ -209,6 +209,7 @@ def change_email02(token):
     except:
         abort(404)
     user.email = new_email
+    user.avatar_hash = user.gravatar_hash()   # 更新头像hash缓存
     db.session.add(user)
     db.session.commit()
     flash("Email change success.")

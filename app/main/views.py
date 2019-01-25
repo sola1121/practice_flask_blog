@@ -43,7 +43,7 @@ def edit_profile():
 @admin_required
 def edit_profile_admin(id):
     user = User.query.get_or_404(id)
-    form = EditProfileAdminForm(user=user)   # FIXME: something wrong here
+    form = EditProfileAdminForm(user=user)
     if form.validate_on_submit():
         user.email = form.email.data
         user.username = form.username.data

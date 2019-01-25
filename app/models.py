@@ -1,4 +1,4 @@
-from flask import current_app
+from flask import current_app, request
 from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
@@ -6,6 +6,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from . import db, login_manager
 
 import datetime
+import hashlib
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -82,14 +83,20 @@ class User(db.Model, UserMixin):
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     last_seen = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    # 头像hash缓存
+    avatar_hash = db.Column(db.String(32))
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
+        # 初始化角色
         if self.role is None:
             if self.email == current_app.config["FLASKY_ADMIN"]:
                 self.role = Role.query.filter_by(name="Administrator").first()
             if self.role is None:
                 self.role = Role.query.filter_by(defualt=True).first()
+        # 初始化头像hash
+        if self.email is not None and self.avatar_hash is None:
+            self.avatar_hash = self.gravatar_hash()
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -131,10 +138,24 @@ class User(db.Model, UserMixin):
         return self.can(Permission.ADMIN)
     
     def ping(self):
-        """每次登录更新时间"""
+        """每次登录更新时间, 将会注册到before_request钩子中, 使用current_user来进行检查"""
         self.last_seen = datetime.datetime.utcnow()
         db.session.add(self)
         db.session.commit()
+
+    def gravatar_hash(self):
+        return hashlib.md5(self.email.lower().encode("U8")).hexdigest()
+
+    def gravatar(self, size=100, default="identicon", rating="g"):
+        """使用gravatar.com提供的服务, 以便在模板中直接使用生成img链接
+        s图像尺寸 
+        r图像级别 
+        d尚未注册的用户使用的默认图像生成方式
+        fd强制使用默认头像"""
+        url = "https://secure.gravatar.com/avatar"
+        md5_str = self.gravatar_hash()
+        return "{url}/{md5_str}?s={size}&d={default}&r={rating}".format(
+                url=url, md5_str=md5_str, size=size, default=default, rating=rating)
 
 
 class AnonymousUser(AnonymousUserMixin):
