@@ -1,16 +1,39 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
+{% import "_macros.html" as macros %}
 
 {% block title %}Flasky{% endblock %}
+
+{% block style_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
 
 {% block page_content %}
 <div class="page-header">
     <h1>Hello, 
         {% if current_user.is_authenticated %}
-            {{ current_user.username }}!<p>Happy to see you again!</p>
+            {{ current_user.username }}!<small> Happy to see you again!</small>
         {% else %}
-            Stranger!<p>Pleased to meet you!</p>
+            Stranger!<small> Pleased to meet you!</small>
         {% endif %}
     </h1>
 </div>
+<div>
+    {# 当前用户有书写权限, 显示输入框 #}
+    {% if current_user.can(Permission.WRITE) %}
+    {{ wtf.quick_form(form) }}
+    {% endif %}
+</div>
+{# 显示博客列表 #}
+{% include "_post.html" %}
+{# 使用分页 #}
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, ".index") }}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{# 使用flask_pagedown, 将会从CDN导入支持页面上使用markdown的js文件 #}
+{{ pagedown.include_pagedown() }}
 {% endblock %}

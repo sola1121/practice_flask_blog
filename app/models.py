@@ -2,11 +2,16 @@ from flask import current_app, request
 from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from markdown import markdown
+import bleach
 
 from . import db, login_manager
 
 import datetime
 import hashlib
+
+
+### 用户相关数据库 ###
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -14,7 +19,7 @@ class Role(db.Model):
     name = db.Column(db.String(64), unique=True)
     defualt = db.Column(db.Boolean, default=False, index=True)
     permissions = db.Column(db.Integer)
-    users = db.relationship('User', backref='role', lazy='dynamic')
+    users = db.relationship('User', backref='role', lazy='dynamic')   # 关联User
 
     def __init__(self, **kwargs):
         super(Role, self).__init__(**kwargs)
@@ -73,7 +78,7 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))   # 关联Role中的主键
     password_hash = db.Column(db.String(128))
     email = db.Column(db.String(64), unique=True, index=True)
     confirmed = db.Column(db.Boolean, default=False)
@@ -85,6 +90,7 @@ class User(db.Model, UserMixin):
     last_seen = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     # 头像hash缓存
     avatar_hash = db.Column(db.String(32))
+    posts = db.relationship("Post", backref="author", lazy="dynamic")   # 关联Post
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -173,3 +179,23 @@ login_manager.anonymous_user = AnonymousUser   # 重新将匿名用户指向, �
 def load_user(user_id):
     """flask_login扩展需要从数据库中获取指定标识符对应的用户时将会调用"""
     return User.query.get(int(user_id))
+
+
+### 博客文章相关数据库 ###
+
+class Post(db.Model):
+    __tablename__ = "posts"
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))   # 关联User中的主键
+    
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ["a", "abbr", "acronym", "b", "blockquote", "code", "em", "i", "li",
+                        "ol", "pre", "strong", "ul", "h1", "h2", "h3", "p"]
+        target.body_html = bleach.linkify(bleach.clean(markdown(value, output_format="html"), tags=allowed_tags, strip=True))
+
+
+db.event.listen(Post.body, "set", Post.on_changed_body)   # 监听发生在Post.body上的set事件, 并使用指定的函数再处理

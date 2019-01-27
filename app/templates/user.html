@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Blog - User Account{% endblock %}
 
+{% block style_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
+
 {% block page_content %}
 <div class="page-header">
     {# 使用模型的gravatar方法生成头像链接, 直接放在img中 #}
@@ -37,4 +41,7 @@
         {% endif %}
     </div>
 </div>
+{# 显示用户对应文章 #}
+<h3>Post by {{ user.username }}</h3>
+{% include "_post.html" %}
 {% endblock %}
