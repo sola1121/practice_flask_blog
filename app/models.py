@@ -67,11 +67,19 @@ class Role(db.Model):
 
 
 class Permission:
+    """用户权限值"""
     FOLLOW = 1
     COMMIT = 2
     WRITE = 4
     MODERATE = 8
     ADMIN = 16
+
+
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)   # 关注者的id
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)   # 被关注者的id
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
 class User(db.Model, UserMixin):
@@ -91,6 +99,17 @@ class User(db.Model, UserMixin):
     # 头像hash缓存
     avatar_hash = db.Column(db.String(32))
     posts = db.relationship("Post", backref="author", lazy="dynamic")   # 关联Post
+    # 关注者, 都是只涉及User表, 属于自引用关系
+    followed = db.relationship("Follow",    # 被当前账号关注的
+                                foreign_keys=[Follow.follower_id],   # 指明对应Follow中的主键, 是关注者
+                                backref=db.backref("follower", lazy="joined"),
+                                lazy="dynamic",
+                                cascade="all, delete-orphan")
+    followers = db.relationship("Follow",    # 当前账号关注的
+                                foreign_keys=[Follow.followed_id],   # 指明对应Follow中的主键, 是被关注者
+                                backref=db.backref("followed", lazy="joined"),
+                                lazy="dynamic",
+                                cascade="all, delete-orphan")
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -103,6 +122,8 @@ class User(db.Model, UserMixin):
         # 初始化头像hash
         if self.email is not None and self.avatar_hash is None:
             self.avatar_hash = self.gravatar_hash()
+        # 将自己设为自己的关注者
+        self.follow(self)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -162,6 +183,48 @@ class User(db.Model, UserMixin):
         md5_str = self.gravatar_hash()
         return "{url}/{md5_str}?s={size}&d={default}&r={rating}".format(
                 url=url, md5_str=md5_str, size=size, default=default, rating=rating)
+
+    # 用户关注相关
+    def follow(self, user):
+        """关注某个用户"""
+        if not self.is_following(user):
+            f = Follow(follower=self, followed=user)  # 自己设为关注者, 指定用户设为被关注者
+            db.session.add(f)
+    
+    def unfollow(self, user):
+        """取消关注某个用户"""
+        f = self.followed.filter_by(followed_id=user.id).first()   # 当前用户关注的用户中查找指定用户
+        if f:
+            db.session.delete(f)
+    
+    def is_following(self, user):
+        """当前用户是否在关注某个用户"""
+        if user.id is None:
+            return False
+        return self.followed.filter_by(followed_id=user.id).first() is not None
+    
+    def is_followed_by(self, user):
+        """当前用户是否被某个用户关注"""
+        if user.id is None:
+            return False
+        return self.followers.filter_by(follower_id=user.id).first() is not None
+
+    @property
+    def followed_posts(self):
+        # select * from Post 
+        # join Follow on Follow.followed_id=Post.author_id 
+        # join User on User.id = Follow.follower_id
+        # where User.id = ;
+        return Post.query.join(Follow, Follow.followed_id == Post.author_id).filter(Follow.follower_id == self.id)
+    
+    @staticmethod
+    def add_self_follows():
+        """更新还未关注自己的用户"""
+        for user in User.query.all():
+            if not user.is_following(user):
+                user.follow(user)
+                db.session.add(user)
+                db.session.commit()
 
 
 class AnonymousUser(AnonymousUserMixin):

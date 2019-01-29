@@ -1,33 +1,60 @@
-from flask import render_template, request, session, redirect, url_for, current_app, flash, abort
+from flask import render_template, request, make_response, session, redirect, url_for, current_app, flash, abort
 from flask_login import login_required, current_user
 
 from .. import db
 from ..models import User, Role, Permission, Post
 from ..email import send_email
-from ..decorators import admin_required
+from ..decorators import admin_required, permission_required
 from . import main
 from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm
 
 
 @main.route("/", methods=["GET", "POST"])
 def index():
+    """首页显示"""
     form = PostForm()
     if current_user.can(Permission.WRITE) and form.validate_on_submit():
         new_post = Post(body=form.body.data, author=current_user._get_current_object())
         db.session.add(new_post)
         db.session.commit()
         return redirect(url_for(".index"))
+    show_followed = False
+    if current_user.is_authenticated:
+        show_followed = bool(request.cookies.get("show_followed", ""))
+    if show_followed:
+        query = current_user.followed_posts
+    else:
+        query = Post.query
     # 使用分页
     page = request.args.get("page", 1, type=int)
-    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+    pagination = query.order_by(Post.timestamp.desc()).paginate(
         page, per_page=current_app.config["FLASKY_POST_PER_PAGE"], error_out=False
     )
     posts = pagination.items
-    return render_template("index.html", form=form, posts=posts, pagination=pagination)
+    return render_template("index.html", form=form, posts=posts, pagination=pagination, show_followed=show_followed)
+
+
+@main.route("/all")
+@login_required
+def show_all():
+    """记住用户的选项, 重定向到index"""
+    resp = make_response(redirect(url_for(".index")))
+    resp.set_cookie("show_followed", "", max_age=3600*24*30)   # 30天
+    return resp
+
+
+@main.route("/followed")
+@login_required
+def show_followed():
+    """记住用户的选项, 重定向到index"""
+    resp = make_response(redirect(url_for(".index")))
+    resp.set_cookie("show_followed", "1", max_age=3600*24*30)   # 30天
+    return resp
 
 
 @main.route("/user/<username>")
 def user(username):
+    """用户资料页"""
     user = User.query.filter_by(username=username).first()
     if user is None:
         abort(404)
@@ -38,6 +65,7 @@ def user(username):
 @main.route("/edit-profile", methods=["GET", "POST"])
 @login_required
 def edit_profile():
+    """用于对应用户的用户资料编辑"""
     form = EditProfileForm()
     if form.validate_on_submit():
         current_user.name = form.name.data
@@ -57,6 +85,7 @@ def edit_profile():
 @login_required
 @admin_required
 def edit_profile_admin(id):
+    """用于管理员的用户资料编辑"""
     user = User.query.get_or_404(id)
     form = EditProfileAdminForm(user=user)
     if form.validate_on_submit():
@@ -83,6 +112,7 @@ def edit_profile_admin(id):
 
 @main.route("/post/<int:id>")
 def post(id):
+    """在单独的页面显示文章"""
     post = Post.query.get_or_404(id)
     return render_template("post.html", posts=[post])
 
@@ -90,6 +120,7 @@ def post(id):
 @main.route("/editpost/<int:id>", methods=["GET", "POST"])
 @login_required
 def edit(id):
+    """在对文章进行编辑"""
     post = Post.query.get_or_404(id)
     if current_user != post.author and not current_user.can(Permission.ADMIN):
         abort(403)
@@ -102,3 +133,73 @@ def edit(id):
         return redirect(url_for(".post", id=post.id))
     form.body.data = post.body
     return render_template("edit_post.html", form=form)
+
+
+@main.route("/follow/<username>")
+@login_required
+@permission_required(Permission.FOLLOW)
+def follow(username):
+    """关注用户"""
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash("Invalid user.")
+        return redirect(url_for(".index"))
+    if current_user.is_following(user):
+        flash("You are already following this user.")
+        return redirect(url_for(".user", username=username))
+    current_user.follow(user)
+    db.session.commit()
+    flash("You are now following %s." % username)
+    return redirect(url_for(".user", username=username))
+
+
+@main.route("/unfollow/<username>")
+@login_required
+@permission_required(Permission.FOLLOW)
+def unfollow(username):
+    """不关注用户"""
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash("Invalid user.")
+        return redirect(url_for(".index"))
+    if not current_user.is_following(user):
+        flash("You are not following this user.")
+        return redirect(url_for(".user", username=username))
+    current_user.unfollow(user)
+    db.session.commit()
+    flash("You are now not following %s" % username)
+    return redirect(url_for(".user", username=username))
+
+
+@main.route("/followers/<username>")
+def followers(username):
+    """关注指定用户的"""
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash("Invalid user.")
+        return redirect(url_for(".index"))
+    # 当前用户关注的
+    page = request.args.get("page", 1, type=int)
+    pagination = user.followers.paginate(
+        page, per_page=current_app.config["FLASKY_FOLLOWERS_PER_PAGE"], error_out=False
+    )
+    follows = [{"user": item.follower, "timestamp": item.timestamp} for item in pagination.items]
+    return render_template("followers.html", user=user, title="Followers of", endpoint=".followers",
+                            pagination=pagination, follows=follows)
+
+
+@main.route("/followed_by/<username>")
+def followed_by(username):
+    """指定用户关注的"""
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash("Invalid user.")
+        return redirect(url_for(".index"))
+    # 关注当前用户的
+    page = request.args.get("page", 1, type=int)
+    pagination = user.followed.paginate(
+        page, per_page=current_app.config["FLASKY_FOLLOWERS_PER_PAGE"], error_out=False
+    )
+    follows = [{"user": item.followed, "timestamp": item.timestamp} for item in pagination.items]
+    return render_template("followers.html", user=user, title="Followed by", endpoint=".followed_by",
+                            pagination=pagination, follows=follows)
