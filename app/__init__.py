@@ -40,4 +40,7 @@ def create_app(config_name):
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix="/auth")   # 所有该蓝本下的路由将会加上auth的前缀
 
+    from .api import api as api_blueprint
+    app.register_blueprint(api_blueprint, url_prefix="/api/ver1")
+
     return app
