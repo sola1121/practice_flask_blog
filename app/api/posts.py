@@ -41,7 +41,7 @@ def new_post():
     post.author = g.current_user
     db.session.add(post)
     ad.session.commit()
-    return jsonify(post.to_json(), 201, {"Location": url_for("api.get_post", id=post.id)})
+    return jsonify(post.to_json()), 201, {"Location": url_for("api.get_post", id=post.id)}
 
 
 @api.route("/posts/<int:id>", methods=["PUT"])
@@ -54,4 +54,4 @@ def edit_post(id):
     post.body = request.json.get("body", post.body)   # 让原post的body如果有新的提交变为新的, 否则还是原来的.
     db.session.add(post)
     db.session.commit()
-    return jsonify(post.to_json())
+    return jsonify(post.to_json()), 200
