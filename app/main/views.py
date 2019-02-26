@@ -227,11 +227,13 @@ def followed_by(username):
 @login_required
 @permission_required(Permission.MODERATE)
 def moderate():
+    """获取评论"""
     page = request.args.get("page", 1, type=int)
-    pagination = Comment.query.order_by(Comment.timestamp.desc()).paginate(page,
-                                                                           per_page=current_app.config["FLASKY_COMMENTS_PER_PAGE"],
-                                                                           error_out=False
-                                                                  )
+    pagination = Comment.query.order_by(Comment.timestamp.desc()).paginate(
+        page,
+        per_page=current_app.config["FLASKY_COMMENTS_PER_PAGE"],
+        error_out=False
+    )
     comments = pagination.items
     return render_template("moderate.html", comments=comments, pagination=pagination, page=page)
 
@@ -240,18 +242,33 @@ def moderate():
 @login_required
 @permission_required(Permission.MODERATE)
 def moderate_enable(id):
+    """取消禁止评论"""
     comment = Comment.query.get_or_404(id)
     comment.disabled = False
     db.session.add(comment)
     db.session.commit()
     return redirect(url_for(".moderate", page=request.args.get("page", 1, type=int)))
 
+
 @main.route("/moderate/disable/<int:id>")
 @login_required
 @permission_required(Permission.MODERATE)
 def moderate_disable(id):
+    """禁止评论"""
     comment = Comment.query.get_or_404(id)
     comment.disabled = True
     db.session.add(comment)
     db.session.commit()
     return redirect(url_for(".moderate", page=request.args.get("page", 1, type=int)))
+
+
+@main.route("/shutdown")
+def server_sutdown():
+    # 关闭服务器
+    if not current_app.testing:   # 仅当运行在测试环境中时, 才会有用
+        abort(404)
+    shutdown = request.environ.get("werkzeug.server.shutdown")   # 调用Werkzeug对环境开放的关闭函数.
+    if not shutdown:
+        abort(500)
+    shutdown()
+    return "Shutting down..."

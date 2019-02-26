@@ -187,7 +187,6 @@ class User(db.Model, UserMixin):
         return "{url}/{md5_str}?s={size}&d={default}&r={rating}".format(
                 url=url, md5_str=md5_str, size=size, default=default, rating=rating)
 
-    # 用户关注相关
     def follow(self, user):
         """关注某个用户"""
         if not self.is_following(user):
