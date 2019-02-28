@@ -100,7 +100,7 @@ app, migrations, tests, venv都是次级目录, app实现主要的功能, MVC设
 
     from . import views, errors   # 防止重复导入, 放在后面. 导入这两个模块, 才能在这对应的模块使用蓝本.
 
-#### 运行流程
+**运行流程**
 
 1. practice_flask_blog.py应用实例  
 2. app/包(\_\_init__.py), create_app函数, 会生成完整的app应用  
@@ -108,7 +108,7 @@ app, migrations, tests, venv都是次级目录, app实现主要的功能, MVC设
 
 > practice_flask_blog.py --> app/\_\_init__.py --> app/main/\_\_init__.py
 
-#### 使用蓝本
+**使用蓝本**
 
 + 使用工厂函数的操作让定义路由变复杂了. 在单脚本应用中, 应用实例存在于全局作用域中 路由可以直接使用app.route装饰器定义. 此时应用在运行时创建, 只有调用create_app之后才能使用app.route装饰器, 这时定义路由就太晚了.
 + 自定义的错误处理程序页面临同样的问题, 因为错误页面处理程序使用app.errorhandler装饰器定义.
@@ -135,3 +135,6 @@ app, migrations, tests, venv都是次级目录, app实现主要的功能, MVC设
 ### 测试阶段
 
 [测试](./08测试.md)
+[性能](./09性能.md)
+
+### 部署

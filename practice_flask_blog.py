@@ -52,3 +52,13 @@ def test(coverage):
         covdir = os.path.join(basedir, "tmp/coverage")
         COV.html_report(directory=covdir)
         COV.erase()
+
+
+@app.cli.command()
+@click.option("--length", default=25, help="Number of functions to include in the profiler report.")
+@click.option("--profile-dir", default=None, help="Directory where profiler data files ar saved.")
+def profile(length, profile_dir):
+    """开始一个在源码分析器下的应用"""
+    from werkzeug.contrib.profiler import ProfilerMiddleware
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length], profile_dir=profile_dir)
+    app.run(debug=False)
