@@ -1,0 +1,1 @@
+web: gunicorn practice_flask_blog:app

@@ -38,7 +38,7 @@ def verify_password(email_or_token, password):
     return user.verify_password(password)
 
 
-@api.route("/tokens/", method=["POST"])
+@api.route("/tokens/", methods=["POST"])
 def get_token():
     # 检查g.token_used, 拒绝使用令牌验证身份. 防止用户绕过令牌过期机制.
     if g.current_user.is_anonymous or g.token_used:

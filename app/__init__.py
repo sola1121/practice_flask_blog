@@ -32,6 +32,10 @@ def create_app(config_name):
     db.init_app(app)
     login_manager.init_app(app)
     pagedown.init_app(app)
+    # 把所有请求重定向到安全的HTTP协议
+    if app.config["SSL_REDIRECT"]:
+        from flask_sslify import SSLify
+        sslify = SSLify(app)
 
     # 向应用中注册蓝本
     from .main import main as main_blueprint
@@ -41,6 +45,6 @@ def create_app(config_name):
     app.register_blueprint(auth_blueprint, url_prefix="/auth")   # 所有该蓝本下的路由将会加上auth的前缀
 
     from .api import api as api_blueprint
-    app.register_blueprint(api_blueprint, url_prefix="/api/ver1")
+    app.register_blueprint(api_blueprint, url_prefix='/api/ver1')
 
     return app

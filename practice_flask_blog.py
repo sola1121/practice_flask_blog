@@ -10,7 +10,7 @@ if os.environ.get("FLASK_COVERAGE"):
 import sys
 
 import click
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade
 from app import create_app, db
 from app.models import User, Follow, Role, Permission, Post, Comment
 
@@ -62,3 +62,16 @@ def profile(length, profile_dir):
     from werkzeug.contrib.profiler import ProfilerMiddleware
     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length], profile_dir=profile_dir)
     app.run(debug=False)
+
+
+@app.cli.command()
+def deploy():
+    """启动部署任务"""
+    # 把数据库迁移到最新版本
+    upgrade()
+
+    # 创建或更新用户角色
+    Role.insert_roles()
+
+    # 确保所有用户都关注了他们自己
+    User.add_self_follows()

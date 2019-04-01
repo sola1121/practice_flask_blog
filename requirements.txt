@@ -1,0 +1,3 @@
+# 给Heroku使用的requirements.txt文件.
+# 对于其他环境所需要的环境工具, 在requirements子目录下
+-r requirements/heroku.txt

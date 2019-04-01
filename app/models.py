@@ -6,7 +6,7 @@ from markdown import markdown
 import bleach
 
 from . import db, login_manager
-from .app.exceptions import ValidationError
+from app.exceptions import ValidationError
 
 import datetime
 import hashlib
@@ -48,22 +48,22 @@ class Role(db.Model):
     def insert_roles():
         """在数据库中创建roles缺少的角色"""
         roles = {
-            "User": (Permission.FOLLOW, Permission.COMMIT, Permission.WRITE),   # 用户
-            "Moderator": (Permission.FOLLOW, Permission.COMMIT, Permission.WRITE, 
+            "User": (Permission.FOLLOW, Permission.COMMENT, Permission.WRITE),   # 用户
+            "Moderator": (Permission.FOLLOW, Permission.COMMENT, Permission.WRITE, 
                           Permission.MODERATE),   # 协管员
-            "Administrator": (Permission.FOLLOW, Permission.COMMIT, Permission.WRITE, 
+            "Administrator": (Permission.FOLLOW, Permission.COMMENT, Permission.WRITE, 
                               Permission.MODERATE, Permission.ADMIN),   # 管理员
         }
         defualt_role = "User"
         for r in roles:
             role = Role.query.filter_by(name=r).first()
             if role is None:
-                new_role = Role(name=r)
-            new_role.reset_permissions()
+                role = Role(name=r)
+            role.reset_permissions()
             for perm in roles[r]:
-                new_role.add_permissions(perm)
-            new_role.defualt = (new_role.name == defualt_role)
-            db.session.add(new_role)
+                role.add_permissions(perm)
+            role.defualt = (role.name == defualt_role)
+            db.session.add(role)
         db.session.commit()
 
 
